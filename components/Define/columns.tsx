@@ -1,11 +1,11 @@
 import { GridColDef } from "@mui/x-data-grid";
 import { BiPencil } from "react-icons/bi";
-import { FiEye } from "react-icons/fi";
+import { FaTrash } from "react-icons/fa";
 
-export const generateColumns = (): GridColDef[] => {
+export const generateColumns = (onRequestDelete?: (id: string) => void, onRequestEdit?: (id: string) => void): GridColDef[] => {
   return [
     {
-      field: "positionTitle",
+      field: "title",
       minWidth: 150,
       headerName: "عنوان نقش",
       flex: 1,
@@ -20,7 +20,7 @@ export const generateColumns = (): GridColDef[] => {
       ),
     },
     {
-      field: "positionDescription",
+      field: "description",
       minWidth: 150,
       headerName: "توضیحات نقش",
       flex: 1,
@@ -43,14 +43,17 @@ export const generateColumns = (): GridColDef[] => {
         return (
           <div className="mx-auto mt-4 flex justify-center gap-2 focus-visible:ring-0">
             <button
-              onClick={() => {}}
+              onClick={() => onRequestDelete?.(params.row.id)}
               title="حذف"
-              className="text-evalchi-border hover:text-primary-main cursor-pointer"
+              className="text-red-700 hover:text-red-500 cursor-pointer"
             >
-              <FiEye size={20} />
-
+              <FaTrash size={20} />
             </button>
-            <button title="ویرایش" className="text-[#3F8CFD] hover:text-blue-800 cursor-pointer">
+            <button 
+              onClick={() => onRequestEdit?.(params.row.id)}
+              title="ویرایش" 
+              className="text-[#3F8CFD] hover:text-blue-800 cursor-pointer"
+            >
               <BiPencil size={20} />
             </button>
           </div>

@@ -19,33 +19,32 @@ import { IoChevronDownOutline, IoCloseCircleOutline } from "react-icons/io5";
 
 type NodeLabelProps = {
   title: string;
-  path: number[];
-  onAdd: (pos: "top" | "right" | "bottom" | "left", path: number[]) => void;
-  onAction?: (action: "edit" | "delete", path: number[]) => void;
+  nodeId: string;
+  onAdd: (pos: "top" | "right" | "bottom" | "left", nodeId: string) => void;
+  onAction?: (action: "edit" | "delete", nodeId: string) => void;
   isActive?: boolean;
-  onOpenOverlay?: (path: number[]) => void;
+  onOpenOverlay?: (nodeId: string) => void;
 };
 
 type TreeChartProps = {
   data: OrgNode[];
   onAddPosition: (
     pos: "top" | "right" | "bottom" | "left",
-    path: number[],
+    nodeId: string,
     title: string
   ) => void;
-  onEditPosition: (path: number[], newTitle: string) => void;
-  onDeletePosition: (path: number[]) => void;
+  onEditPosition: (nodeId: string, newTitle: string, newDescription: string) => void;
+  onDeletePosition: (nodeId: string) => void;
   organizationOptions: { title: string }[];
   guideData?: GuideStep[];
   onOpenHelp?: () => void;
 };
 
 const NodeLabel = React.forwardRef<HTMLDivElement, NodeLabelProps>(
-  ({ title, path, onAdd, onAction, isActive = false, onOpenOverlay }, ref) => {
+  ({ title, nodeId, onAdd, onAction, isActive = false, onOpenOverlay }, ref) => {
     const [PlusIcon, setPlusIcon] = useState<React.ComponentType<{
       size?: number;
     }> | null>(null);
-    // overlay visibility is controlled by parent via isActive
 
     useEffect(() => {
       let mounted = true;
@@ -61,10 +60,8 @@ const NodeLabel = React.forwardRef<HTMLDivElement, NodeLabelProps>(
       };
     }, []);
 
-    // outside click handling managed by parent
-
     const handleAdd = (pos: "top" | "right" | "bottom" | "left") => {
-      onAdd(pos, path);
+      onAdd(pos, nodeId);
     };
 
     const buttonBase: React.CSSProperties = {
@@ -161,7 +158,7 @@ const NodeLabel = React.forwardRef<HTMLDivElement, NodeLabelProps>(
                 className="hover:text-primary-main cursor-pointer font-[600] text-[14px]"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onOpenOverlay && onOpenOverlay(path);
+                  onOpenOverlay && onOpenOverlay(nodeId);
                 }}
               >
                 {title}
@@ -201,7 +198,7 @@ const NodeLabel = React.forwardRef<HTMLDivElement, NodeLabelProps>(
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    onAction && onAction("delete", path);
+                    onAction && onAction("delete", nodeId);
                   }}
                   style={{
                     width: 40,
@@ -223,7 +220,7 @@ const NodeLabel = React.forwardRef<HTMLDivElement, NodeLabelProps>(
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    onAction && onAction("edit", path);
+                    onAction && onAction("edit", nodeId);
                   }}
                   style={{
                     width: 40,
@@ -256,30 +253,25 @@ type OrgChartModule = typeof import("react-organizational-chart");
 function renderChildren(
   org: OrgChartModule,
   node: OrgNode,
-  path: number[] = [],
-  onAdd?: (pos: "top" | "right" | "bottom" | "left", path: number[]) => void,
-  onAction?: (action: "edit" | "delete", path: number[]) => void,
-  activePath?: number[] | null,
-  onOpenOverlay?: (path: number[]) => void
+  onAdd?: (pos: "top" | "right" | "bottom" | "left", nodeId: string) => void,
+  onAction?: (action: "edit" | "delete", nodeId: string) => void,
+  activeNodeId?: string | null,
+  onOpenOverlay?: (nodeId: string) => void
 ): React.ReactNode {
   if (!node.children || node.children.length === 0) {
     return null;
   }
 
-  return node.children.map((child, index) => (
+  return node.children.map((child) => (
     <org.TreeNode
-      key={`${node.title}-${index}`}
+      key={child.id}
       label={
         <NodeLabel
           title={child.title}
-          path={[...path, index]}
-          onAdd={(pos, p) => onAdd && onAdd(pos, p)}
+          nodeId={child.id}
+          onAdd={(pos, nodeId) => onAdd && onAdd(pos, nodeId)}
           onAction={onAction}
-          isActive={
-            activePath
-              ? JSON.stringify(activePath) === JSON.stringify([...path, index])
-              : false
-          }
+          isActive={activeNodeId === child.id}
           onOpenOverlay={onOpenOverlay}
         />
       }
@@ -287,10 +279,9 @@ function renderChildren(
       {renderChildren(
         org,
         child,
-        [...path, index],
         onAdd,
         onAction,
-        activePath,
+        activeNodeId,
         onOpenOverlay
       )}
     </org.TreeNode>
@@ -327,14 +318,14 @@ const TreeChart: React.FC<TreeChartProps> = ({
   const [newTitle, setNewTitle] = useState<string>("");
   const [pendingAdd, setPendingAdd] = useState<{
     pos: "top" | "right" | "bottom" | "left";
-    path: number[];
+    nodeId: string;
   } | null>(null);
   const [editOpen, setEditOpen] = useState<boolean>(false);
   const [deleteOpen, setDeleteOpen] = useState<boolean>(false);
-  const [editPath, setEditPath] = useState<number[] | null>(null);
+  const [editNodeId, setEditNodeId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
-  const [deletePath, setDeletePath] = useState<number[] | null>(null);
-  const [activeOverlayPath, setActiveOverlayPath] = useState<number[] | null>(
+  const [deleteNodeId, setDeleteNodeId] = useState<string | null>(null);
+  const [activeOverlayNodeId, setActiveOverlayNodeId] = useState<string | null>(
     null
   );
 
@@ -377,18 +368,22 @@ const TreeChart: React.FC<TreeChartProps> = ({
     return <div>No data</div>;
   }
 
-  const getNodeByPath = (arr: OrgNode[], p: number[]): OrgNode | null => {
-    let node: OrgNode | undefined = arr[0];
-    for (const idx of p) {
-      if (!node || !node.children || !node.children[idx]) return null;
-      node = node.children[idx];
+  const getNodeById = (nodes: OrgNode[], targetId: string): OrgNode | null => {
+    for (const node of nodes) {
+      if (node.id === targetId) {
+        return node;
+      }
+      if (node.children) {
+        const found = getNodeById(node.children, targetId);
+        if (found) return found;
+      }
     }
-    return node ?? null;
+    return null;
   };
 
-  const getNodeTitleByPath = (arr: OrgNode[], p: number[]): string => {
-    const n = getNodeByPath(arr, p);
-    return n?.title ?? "";
+  const getNodeTitleById = (nodes: OrgNode[], targetId: string): string => {
+    const node = getNodeById(nodes, targetId);
+    return node?.title ?? "";
   };
 
   return (
@@ -403,7 +398,7 @@ const TreeChart: React.FC<TreeChartProps> = ({
         const target = e.target as HTMLElement;
         const isInsideNode = target.closest(".node-label");
         if (!isInsideNode) {
-          setActiveOverlayPath(null);
+          setActiveOverlayNodeId(null);
         }
       }}
     >
@@ -507,7 +502,7 @@ const TreeChart: React.FC<TreeChartProps> = ({
               fontWeight: 600,
             }}
             onClick={() => {
-              if (!editPath) {
+              if (!editNodeId) {
                 setEditOpen(false);
                 return;
               }
@@ -515,7 +510,7 @@ const TreeChart: React.FC<TreeChartProps> = ({
                 setEditOpen(false);
                 return;
               }
-              onEditPosition(editPath, editValue.trim());
+              onEditPosition(editNodeId, editValue.trim(), ""); // Assuming newDescription is empty for now
               setEditOpen(false);
             }}
           >
@@ -583,11 +578,11 @@ const TreeChart: React.FC<TreeChartProps> = ({
               fontWeight: 600,
             }}
             onClick={() => {
-              if (!deletePath) {
+              if (!deleteNodeId) {
                 setDeleteOpen(false);
                 return;
               }
-              onDeletePosition(deletePath);
+              onDeletePosition(deleteNodeId);
               setDeleteOpen(false);
             }}
           >
@@ -607,26 +602,24 @@ const TreeChart: React.FC<TreeChartProps> = ({
               <NodeLabel
                 ref={rootLabelRef}
                 title={root.title}
-                path={[]}
-                onAdd={(pos, path) => {
-                  setPendingAdd({ pos, path });
+                nodeId={root.id}
+                onAdd={(pos, nodeId) => {
+                  setPendingAdd({ pos, nodeId });
                   setNewTitle("");
                   setModalOpen(true);
                 }}
-                onAction={(action, path) => {
+                onAction={(action, nodeId) => {
                   if (action === "edit") {
-                    setEditPath(path);
-                    setEditValue(getNodeTitleByPath(data, path));
+                    setEditNodeId(nodeId);
+                    setEditValue(getNodeTitleById(data, nodeId));
                     setEditOpen(true);
                   } else if (action === "delete") {
-                    setDeletePath(path);
+                    setDeleteNodeId(nodeId);
                     setDeleteOpen(true);
                   }
                 }}
-                isActive={
-                  activeOverlayPath ? activeOverlayPath.length === 0 : false
-                }
-                onOpenOverlay={(path) => setActiveOverlayPath(path)}
+                isActive={activeOverlayNodeId === root.id}
+                onOpenOverlay={(nodeId) => setActiveOverlayNodeId(nodeId)}
               />
             }
             lineWidth={"2px"}
@@ -636,24 +629,23 @@ const TreeChart: React.FC<TreeChartProps> = ({
             {renderChildren(
               org,
               root,
-              [],
-              (pos, path) => {
-                setPendingAdd({ pos, path });
+              (pos, nodeId) => {
+                setPendingAdd({ pos, nodeId });
                 setNewTitle("");
                 setModalOpen(true);
               },
-              (action, path) => {
+              (action, nodeId) => {
                 if (action === "edit") {
-                  setEditPath(path);
-                  setEditValue(getNodeTitleByPath(data, path));
+                  setEditNodeId(nodeId);
+                  setEditValue(getNodeTitleById(data, nodeId));
                   setEditOpen(true);
                 } else if (action === "delete") {
-                  setDeletePath(path);
+                  setDeleteNodeId(nodeId);
                   setDeleteOpen(true);
                 }
               },
-              activeOverlayPath,
-              (path) => setActiveOverlayPath(path)
+              activeOverlayNodeId,
+              (nodeId) => setActiveOverlayNodeId(nodeId)
             )}
           </org.Tree>
         ) : (
@@ -760,7 +752,7 @@ const TreeChart: React.FC<TreeChartProps> = ({
                 setModalOpen(false);
                 return;
               }
-              onAddPosition(pendingAdd.pos, pendingAdd.path, newTitle.trim());
+              onAddPosition(pendingAdd.pos, pendingAdd.nodeId, newTitle.trim());
               setModalOpen(false);
             }}
           >

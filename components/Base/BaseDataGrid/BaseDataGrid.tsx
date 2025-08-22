@@ -1,10 +1,17 @@
 "use client";
-import { rows } from "@/components/Define/rows";
-import { FormControl, MenuItem, Select } from "@mui/material";
+import {
+  Button,
+  FormControl,
+  MenuItem,
+  Select,
+  TextField,
+} from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import { faIR } from "@mui/x-data-grid/locales";
-import { FC, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { BiChevronLeft, BiChevronRight } from "react-icons/bi";
+import { FaSearch } from "react-icons/fa";
+import { FiPlus } from "react-icons/fi";
 import { IoArrowDownOutline, IoArrowUpOutline } from "react-icons/io5";
 
 // interfaces
@@ -14,6 +21,9 @@ interface DataGridRTLProps {
   createButton: boolean;
   buttonText: string;
   columns: GridColDef[];
+  rows: any[];
+  searchOptions?: Array<{ value: string; label: string }>;
+  showSearch?: boolean;
 }
 
 interface IPaginationModel {
@@ -37,12 +47,14 @@ interface ICustomSortIcon {
   handleSortDesc: () => void;
 }
 
-
-const BaseDataGrid: FC<DataGridRTLProps> = ({
+const BaseDataGrid: React.FC<DataGridRTLProps> = ({
   title,
   createButton,
   buttonText,
   columns,
+  rows,
+  searchOptions,
+  showSearch,
 }) => {
   // sorting
   const [ordering, setOrdering] = useState<string>("Id asc");
@@ -71,7 +83,7 @@ const BaseDataGrid: FC<DataGridRTLProps> = ({
   };
 
   // Custom Pagination -----------------------------------------------------
-const CustomPagination: React.FC<ICustomPagination> = ({
+  const CustomPagination: React.FC<ICustomPagination> = ({
     paginationModel,
     setPaginationModel,
     totalPages,
@@ -149,24 +161,130 @@ const CustomPagination: React.FC<ICustomPagination> = ({
       </div>
     );
   };
-  
+
   // table toolbar
-  const CustomToolbar: React.FC<ICustomToolbar> = ({
-    title,
-  }) => {
+  const CustomToolbar: React.FC<ICustomToolbar> = ({ title }) => {
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [searchValue, setSearchValue] = useState("");
+    const [selectedSearchOption, setSelectedSearchOption] = useState("all");
+
+    // Test options for demonstration
+    const testOptions = [
+      { value: "all", label: "همه فیلدها" },
+      { value: "name", label: "نام" },
+      { value: "email", label: "ایمیل" },
+      { value: "phone", label: "شماره تماس" },
+      { value: "address", label: "آدرس" },
+      { value: "date", label: "تاریخ" },
+    ];
+
+    const handleSearchClick = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsSearchOpen((prev) => !prev);
+    };
+
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      setSearchValue(e.target.value);
+    };
+
     return (
       <div
         className="flex flex-col justify-between gap-2 py-4 sm:flex-row"
         style={{ backgroundColor: "var(--color--evalchi-background)" }}
       >
         <h2 className="text-lg font-bold">{title}</h2>
-        {createButton && (
-          <button className="bg-primary-main px-[22px] py-[8px] text-black font-bold rounded-md">{buttonText}</button>
-        )}
+        <div className="flex items-center gap-2 ml-3">
+          {createButton && (
+            <Button
+              sx={{
+                backgroundColor: "var(--color-primary-main)",
+                color: "white",
+                padding: "0.5rem 1rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                "&:hover": {
+                  backgroundColor: "var(--color-primary-dark)",
+                },
+              }}
+              className="group cursor-pointer hover:scale-105 transition-all duration-300 ease-in-out"
+            >
+              <FiPlus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
+              <span className="relative z-10">{buttonText}</span>
+              <div className="absolute inset-0 bg-primary-light rounded-xl opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+            </Button>
+          )}
+
+          {/* Search Container */}
+          <div className="relative flex items-center gap-2">
+            {/* Search Input with Animation */}
+            <div
+              className={`relative overflow-hidden transition-all duration-500 ease-in-out flex justify-center items-center gap-3 ${
+                isSearchOpen ? "w-64 opacity-100" : "w-0 opacity-0"
+              }`}
+              style={{ minWidth: isSearchOpen ? "256px" : "0px" }}
+            >
+              <TextField
+                variant="outlined"
+                size="small"
+                value={searchValue}
+                onChange={handleSearchChange}
+                placeholder="جستجو..."
+                sx={{
+                  marginRight: 0.5,
+                  "& .MuiOutlinedInput-root": {
+                    "&.Mui-focused fieldset": {
+                      borderColor: "var(--color-primary-main)", // Replace with your organizational color
+                    },
+                  },
+                }}
+              />
+              <Select
+                value={selectedSearchOption}
+                onChange={(e) => setSelectedSearchOption(e.target.value)}
+                displayEmpty
+                inputProps={{ "aria-label": "Select field" }}
+                size="small"
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    "&.Mui-focused fieldset": {
+                      borderColor: "var(--color-primary-main)", // Replace with your organizational color
+                    },
+                  },
+                }}
+              >
+                <MenuItem value="all" disabled>
+                  همه فیلدها
+                </MenuItem>
+                {searchOptions?.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </div>
+
+            {/* Search Button */}
+            {showSearch && (
+              <Button
+                onClick={handleSearchClick}
+                type="button"
+                sx={{
+                  backgroundColor: "transparent",
+                  color: "var(--color-primary-main)",
+                  borderRadius: "10px",
+                }}
+              >
+                <FaSearch size={20} className="text-gray-600" />
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
     );
   };
-  
+
   //  custom sort icon
   const CustomSortIcon: React.FC<ICustomSortIcon> = ({
     direction,
@@ -175,7 +293,7 @@ const CustomPagination: React.FC<ICustomPagination> = ({
   }) => {
     return direction === "asc" ? (
       <div>
-        <IoArrowUpOutline  
+        <IoArrowUpOutline
           size={18}
           className="transition duration-300 hover:text-blue-600"
           onClick={handleSortAsc}
@@ -183,7 +301,7 @@ const CustomPagination: React.FC<ICustomPagination> = ({
       </div>
     ) : (
       <div>
-        <IoArrowDownOutline 
+        <IoArrowDownOutline
           size={18}
           className="transition duration-300 hover:text-blue-600"
           onClick={handleSortDesc}
@@ -192,10 +310,18 @@ const CustomPagination: React.FC<ICustomPagination> = ({
     );
   };
 
+  const [isRtl, setIsRtl] = useState(false);
+
+  useEffect(() => {
+    // Logic to determine if the direction should be RTL
+    const direction = document.documentElement.dir;
+    setIsRtl(direction === "rtl");
+    console.log(direction);
+  }, []);
+
   return (
     <div
       id="datagrid-div"
-      dir="rtl"
       className={`relative box-border flex w-full flex-col md:h-full lg:top-0 lg:h-full xl:h-full 2xl:h-full`}
     >
       {/* Grid */}
@@ -301,7 +427,7 @@ const CustomPagination: React.FC<ICustomPagination> = ({
             },
             "& .MuiDataGrid-cell": {
               color: "#444",
-              textAlign: "right",
+              textAlign: isRtl ? "right" : "left",
             },
             "& .MuiButtonBase-root": {
               color: "#444",
@@ -313,11 +439,6 @@ const CustomPagination: React.FC<ICustomPagination> = ({
             "& .MuiList-root": {
               fontFamily: "Yekan, Arial, sans-serif !important",
             },
-            "& .data-grid-rtl-demo-r363y4-MuiButtonBase-root-MuiIconButton-root":
-              {
-                backgroundColor: "inherit",
-                padding: "5px",
-              },
             "& .MuiButton-icon": {
               marginLeft: "10px",
             },

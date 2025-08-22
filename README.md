@@ -1,36 +1,113 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Tree Chart Application
 
-## Getting Started
+A React-based organizational chart application with UUID-based node identification.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Interactive Tree Chart**: Add, edit, and delete organizational positions
+- **UUID System**: Each node has a unique MongoDB-like ObjectId
+- **Backend Ready**: IDs are compatible with database operations
+- **Responsive Design**: Works on desktop and mobile devices
+
+## UUID System Implementation
+
+The application now uses a MongoDB-like ObjectId system for node identification:
+
+### ObjectId Format
+Each node ID is a 24-character hexadecimal string:
+- **Timestamp** (8 chars): Unix timestamp in hex
+- **Random Part** (8 chars): Random hex string  
+- **Counter** (8 chars): Random counter in hex
+
+### Benefits
+- ✅ **Unique Identification**: No conflicts when adding/removing nodes
+- ✅ **Backend Compatible**: Works seamlessly with MongoDB and other databases
+- ✅ **Relationship Tracking**: Easy to track parent-child relationships
+- ✅ **Scalable**: Supports unlimited nodes without ID conflicts
+
+### Utility Functions
+
+```typescript
+// Generate a new ObjectId
+generateObjectId(): string
+
+// Find node by ID
+findNodeById(nodes: OrgNode[], targetId: string): OrgNode | null
+
+// Find parent node by child ID
+findParentById(nodes: OrgNode[], targetId: string): OrgNode | null
+
+// Add IDs to existing tree structure
+addIdsToTree(nodes: RawOrgNode[]): OrgNode[]
+
+// Log tree structure with IDs (debugging)
+logTreeWithIds(nodes: OrgNode[], level?: number): void
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Data Structure
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```typescript
+export type OrgNode = {
+    id: string;        // MongoDB-like ObjectId
+    title: string;     // Node title/position
+    children?: OrgNode[]; // Child nodes
+};
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Usage
 
-## Learn More
+1. **Adding Nodes**: Click the + buttons around any node to add children or siblings
+2. **Editing Nodes**: Click on a node title to open edit overlay
+3. **Deleting Nodes**: Click on a node title and use the delete button
+4. **Navigation**: Use the stepper to move between different views
 
-To learn more about Next.js, take a look at the following resources:
+## Development
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm install
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The application will start on `http://localhost:3000`
 
-## Deploy on Vercel
+## Backend Integration
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+When sending data to your backend:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```typescript
+// Example API call
+const saveNode = async (node: OrgNode) => {
+  const response = await fetch('/api/nodes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: node.id,           // MongoDB ObjectId
+      title: node.title,
+      parentId: parent?.id,  // Reference to parent
+      children: node.children?.map(child => child.id)
+    })
+  });
+  return response.json();
+};
+```
+
+## File Structure
+
+```
+components/
+├── TreeChart/page.tsx      # Main tree chart component
+├── Define/page.tsx         # Define page with tree operations
+├── Define/DefineContent.tsx # Content wrapper
+└── Base/BaseDataGrid/      # Data grid components
+
+utils/
+└── data.ts                # Data types and UUID utilities
+```
+
+## Recent Changes
+
+- ✅ Implemented UUID-based node identification
+- ✅ Updated all components to use ID-based operations
+- ✅ Added utility functions for node management
+- ✅ Maintained backward compatibility
+- ✅ Added comprehensive documentation

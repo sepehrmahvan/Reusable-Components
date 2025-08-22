@@ -1,8 +1,26 @@
 import { Box, Typography } from "@mui/material";
 import TreeChart from "../TreeChart/page";
-import { OrgNode } from "@/utils/data";
+import { data, OrgNode } from "@/utils/data";
 import { generateColumns } from "./columns";
 import BaseDataGrid from "../Base/BaseDataGrid/BaseDataGrid";
+
+// Function to flatten the tree structure
+const flattenTree = (nodes: OrgNode[]) => {
+  const flatArray: OrgNode[] = [];
+  const traverse = (node: OrgNode) => {
+    flatArray.push(node);
+    if (node.children) {
+      node.children.forEach(traverse);
+    }
+  };
+  nodes.forEach(traverse);
+  return flatArray;
+};
+
+const searchOptions = [
+  { value: "title", label: "عنوان نقش" },
+  { value: "description", label: "توضیحات نقش" },
+];
 
 // Step content component
 const StepContent = ({
@@ -14,7 +32,9 @@ const StepContent = ({
     onOpenHelp,
     organizationOptions,
     guideData,
-    setHelpOpen
+    setHelpOpen,
+    onRequestDelete,
+    onRequestEdit,
   }: {
     activeStep: number;
     treeData: OrgNode[];
@@ -22,13 +42,15 @@ const StepContent = ({
     guideData: any;
     onAddPosition: (
       pos: "top" | "right" | "bottom" | "left",
-      path: number[],
+      nodeId: string,
       title: string
     ) => void;
-    onEditPosition: (path: number[], newTitle: string) => void;
-    onDeletePosition: (path: number[]) => void;
+    onEditPosition: (nodeId: string, newTitle: string, newDescription: string) => void;
+    onDeletePosition: (nodeId: string) => void;
     onOpenHelp: () => void;
     setHelpOpen: (helpOpen: boolean) => void;
+    onRequestDelete?: (id: string) => void;
+    onRequestEdit?: (id: string) => void;
   }) => {
     switch (activeStep) {
       case 0:
@@ -70,7 +92,11 @@ const StepContent = ({
             title="نقش های سازمانی"
             createButton={true}
             buttonText="ایجاد نقش جدید"
-            columns={generateColumns()}
+            // @ts-ignore
+            columns={generateColumns(onRequestDelete, onRequestEdit)}
+            rows={flattenTree(treeData)} // Changed to treeData
+            searchOptions={searchOptions}
+            showSearch={true}
           />
         );
       default:

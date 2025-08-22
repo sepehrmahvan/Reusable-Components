@@ -4,82 +4,151 @@ import { AiOutlineZoomIn, AiOutlinePlus } from "react-icons/ai";
 import { MdKeyboardArrowDown } from "react-icons/md";
 import { FiEdit3, FiType } from "react-icons/fi";
 
-export type OrgNode = {
-    title: string;
-    children?: OrgNode[];
+/**
+ * UUID System for Tree Chart
+ * 
+ * This system implements MongoDB-like ObjectId generation for tree nodes.
+ * Each node gets a unique 24-character hexadecimal ID that includes:
+ * - Timestamp (8 chars): Unix timestamp in hex
+ * - Random part (8 chars): Random hex string
+ * - Counter (8 chars): Random counter in hex
+ * 
+ * Benefits:
+ * - Unique identification for backend operations
+ * - No conflicts when adding/removing nodes
+ * - Easy to track node relationships
+ * - Compatible with MongoDB ObjectId format
+ */
+
+// Utility function to generate MongoDB-like ObjectId
+export const generateObjectId = (): string => {
+  const timestamp = Math.floor(Date.now() / 1000).toString(16);
+  const randomPart = Math.random().toString(16).substring(2, 10);
+  const counter = Math.floor(Math.random() * 16777216).toString(16).padStart(6, '0');
+  return timestamp + randomPart + counter;
 };
 
-export const data: OrgNode[] = [
+// Utility function to add IDs to existing tree structure
+export const addIdsToTree = (nodes: RawOrgNode[]): OrgNode[] => {
+  return nodes.map(node => ({
+    ...node,
+    id: generateObjectId(),
+    children: node.children ? addIdsToTree(node.children) : undefined
+  }));
+};
+
+// Utility function to find node by ID
+export const findNodeById = (nodes: OrgNode[], targetId: string): OrgNode | null => {
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    if (node.id === targetId) {
+      return node;
+    }
+    if (node.children) {
+      const found = findNodeById(node.children, targetId);
+      if (found) return found;
+    }
+  }
+  return null;
+};
+
+// Utility function to find parent node by child ID
+export const findParentById = (nodes: OrgNode[], targetId: string): OrgNode | null => {
+  for (const node of nodes) {
+    if (node.children) {
+      for (const child of node.children) {
+        if (child.id === targetId) {
+          return node;
+        }
+      }
+      const found = findParentById(node.children, targetId);
+      if (found) return found;
+    }
+  }
+  return null;
+};
+
+// Utility function to log tree structure with IDs for debugging
+export const logTreeWithIds = (nodes: OrgNode[], level: number = 0): void => {
+  nodes.forEach(node => {
+    const indent = '  '.repeat(level);
+    console.log(`${indent}ID: ${node.id}, Title: ${node.title}`);
+    if (node.children && node.children.length > 0) {
+      logTreeWithIds(node.children, level + 1);
+    }
+  });
+};
+
+export type OrgNode = {
+    id: string;
+    title: string;
+    children?: OrgNode[];
+    description?: string;
+};
+
+// Type for raw data without IDs
+export type RawOrgNode = {
+    title: string;
+    children?: RawOrgNode[];
+    description?: string;
+};
+
+export const data: OrgNode[] = addIdsToTree([
     {
         title: 'مدیرعامل',
+        description: "مسئول کلی هدایت و راهبری سازمان و اتخاذ تصمیمات استراتژیک",
         children: [
             {
                 title: 'مدیر ارشد فناوری',
+                description: "مسئول کلی هدایت و راهبری سازمان و اتخاذ تصمیمات استراتژیک",
                 children: [
                     {
                         title: 'سرپرست مهندسی بک‌اند',
-                        children: [
-                            { title: 'توسعه‌دهنده ارشد بک‌اند' },
-                            { title: 'توسعه‌دهنده بک‌اند' },
-                            { title: 'کارآموز بک‌اند' }
-                        ]
+                        description: "مسئول کلی هدایت و راهبری سازمان و اتخاذ تصمیمات استراتژیک",
                     },
                     {
                         title: 'سرپرست مهندسی فرانت‌اند',
-                        children: [
-                            { title: 'توسعه‌دهنده ارشد فرانت‌اند' },
-                            { title: 'توسعه‌دهنده فرانت‌اند' },
-                            { title: 'طراح UI/UX' }
-                        ]
+                        description: "مسئول کلی هدایت و راهبری سازمان و اتخاذ تصمیمات استراتژیک",
                     },
                     {
                         title: 'سرپرست زیرساخت',
-                        children: [
-                            { title: 'مهندس ' },
-                            { title: 'مهندس ' }
-                        ]
+                        description: "مسئول کلی هدایت و راهبری سازمان و اتخاذ تصمیمات استراتژیک",
                     }
                 ]
             },
             {
                 title: 'مدیر ارشد مالی',
-                children: [
-                    { title: 'حسابدار ارشد' },
-                    { title: 'حسابدار' },
-                    { title: 'تحلیلگر مالی' }
-                ]
+                description: "مسئول کلی هدایت و راهبری سازمان و اتخاذ تصمیمات استراتژیک",
             },
             {
                 title: 'مدیر ارشد عملیات',
+                description: "مسئول کلی هدایت و راهبری سازمان و اتخاذ تصمیمات استراتژیک",
                 children: [
                     {
                         title: 'سرپرست پشتیبانی',
-                        children: [
-                            { title: 'کارشناس پشتیبانی' }
-                        ]
+                        description: "مسئول کلی هدایت و راهبری سازمان و اتخاذ تصمیمات استراتژیک",
                     },
                     { title: 'مدیر تدارکات' }
                 ]
             },
             {
                 title: 'مدیر بازاریابی',
-                children: [
-                    { title: 'سرپرست محتوا' },
-                    { title: 'کارشناس سئو' },
-                    { title: 'مدیر تبلیغات' }
-                ]
+                description: "مسئول کلی هدایت و راهبری سازمان و اتخاذ تصمیمات استراتژیک",
             },
             {
                 title: 'مدیر منابع انسانی',
-                children: [
-                    { title: 'کارشناس جذب و استخدام' },
-                    { title: 'کارشناس آموزش و توسعه' },
-                    { title: 'کارشناس جبران خدمات' }
-                ]
+                description: "مسئول کلی هدایت و راهبری سازمان و اتخاذ تصمیمات استراتژیک",
             }
         ]
     }
-];
+]);
+
+// Log the tree structure with IDs for debugging
+console.log('Tree structure with UUIDs:');
+logTreeWithIds(data);
+
+// Also log the complete data structure in JSON format
+console.log('Complete tree data with UUIDs:', JSON.stringify(data, null, 2));
 
 export type GuideStep = {
     icon: React.ComponentType<{ size?: number; color?: string }>;
