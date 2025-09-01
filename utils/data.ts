@@ -93,6 +93,21 @@ export type RawOrgNode = {
     description?: string;
 };
 
+// Type for backend data structure
+export type BackendNode = {
+    _id: string;
+    title: string;
+    position: string;
+    lang: string;
+    parent_id: string | null;
+    parent_lang: string | null;
+    platform_id: string;
+    user_id: string;
+    created_at: string;
+    updated_at: string;
+    children: string[]; // Array of child _id strings
+};
+
 export const data: OrgNode[] = addIdsToTree([
     {
         title: 'مدیرعامل',
